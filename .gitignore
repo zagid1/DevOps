@@ -1,0 +1,25 @@
+# Виртуальное окружение — локальная сборка, никогда не в репозитории
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Артефакты распаковки macOS-архива
+__MACOSX/
+.DS_Store
+
+# Сгенерированное аудио и логи
+*.wav
+*.mp3
+*.m4a
+*.flac
+logs/
