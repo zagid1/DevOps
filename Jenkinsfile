@@ -15,8 +15,8 @@ pipeline {
  
         stage('Setup Environment') {
             steps {
-                sh '${PYTHON} -m pip install -r requirements.txt'
-                sh '${PYTHON} -m pip install -r requirements-dev.txt'
+                sh '${PYTHON} -m pip --ignore-installed install -r requirements.txt'
+                sh '${PYTHON} -m pip --ignore-installed install -r requirements-dev.txt'
             }
         }
  
