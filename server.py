@@ -4,12 +4,12 @@ import os
 import tempfile
 import threading
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from model_loader import ModelLoader
-from pathlib import Path
 
 LOG_DIR = os.environ.get("LOG_DIR", str(Path(__file__).parent / "logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
