@@ -1,0 +1,45 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON: python3
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Environment
+        run: |
+          ${{ env.PYTHON }} -m pip install --upgrade pip
+          ${{ env.PYTHON }} -m pip install -r requirements.txt
+          ${{ env.PYTHON }} -m pip install -r requirements-dev.txt
+
+      - name: Compilation Check
+        run: |
+          ${{ env.PYTHON }} -m py_compile server.py
+          ${{ env.PYTHON }} -m py_compile voicegen.py
+          ${{ env.PYTHON }} -m py_compile model_loader.py
+
+      - name: Linting
+        run: ruff check .
+
+      - name: TODO Check
+        run: bash ci-check.sh
+
+      - name: Tests
+        run: pytest tests/ -v --tb=short
