@@ -3,6 +3,7 @@ pipeline {
  
     environment {
         PYTHON = 'python3'
+        TMPDIR = '/var/tmp/pip-tmp'
     }
  
     stages {
