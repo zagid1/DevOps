@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ lab1 ]
   pull_request:
-    branches: [ main ]
+    branches: [ lab1 ]
 
 env:
   PYTHON: python3
