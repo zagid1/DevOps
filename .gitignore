@@ -23,3 +23,6 @@ __MACOSX/
 *.m4a
 *.flac
 logs/
+
+# Артефакты CI (reports/ собираются Jenkins и GitHub Actions)
+reports/
