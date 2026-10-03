@@ -16,6 +16,16 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 logger = logging.getLogger("voiceapi")
 logger.setLevel(logging.DEBUG)
+logger.propagate = False
+
+# Логгер процесс-глобальный, а модуль переимпортируется при каждом тесте
+# (tests/conftest.py делает del sys.modules["server"]). Без сброса хендлеры
+# накапливались: шесть тестов -> двенадцать хендлеров -> каждая строка
+# в voiceapi.log дублировалась четыре-пять раз, а файловые дескрипторы
+# протекали. removeHandler + close делает инициализацию идемпотентной.
+for _stale in list(logger.handlers):
+    logger.removeHandler(_stale)
+    _stale.close()
 
 # stdout handler
 _stdout_handler = logging.StreamHandler()
@@ -23,7 +33,7 @@ _stdout_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(level
 logger.addHandler(_stdout_handler)
 
 # file handler (for Logstash)
-_file_handler = logging.FileHandler(f"{LOG_DIR}/voiceapi.log")
+_file_handler = logging.FileHandler(f"{LOG_DIR}/voiceapi.log", encoding="utf-8")
 _file_handler.setFormatter(logging.Formatter(json.dumps({
     "@timestamp": "%(asctime)s",
     "logger": "%(name)s",
@@ -34,6 +44,14 @@ logger.addHandler(_file_handler)
 
 MODEL_NAME = "ai-sage/GigaAM-Multilingual"
 model_loaded = False
+
+# VOICEAPI_SKIP_MODEL_LOAD=1 поднимает API без загрузки весов. Нужно
+# интеграционным и нагрузочным тестам: они проверяют HTTP-поверхность,
+# а не транскрипцию. Без этого флага каждая стадия Jenkins тянула бы
+# многогигабайтную модель с HuggingFace ради двух curl-запросов.
+SKIP_MODEL_LOAD = os.environ.get("VOICEAPI_SKIP_MODEL_LOAD", "") == "1"
+PORT = int(os.environ.get("PORT", "8000"))
+
 app = FastAPI(
     title="GigaAM API",
     description=f"API для транскрипции аудио с использованием {MODEL_NAME} модели",
@@ -80,6 +98,9 @@ def _load_model_background():
 
 @app.on_event("startup")
 async def startup_event():
+    if SKIP_MODEL_LOAD:
+        logger.info("VOICEAPI_SKIP_MODEL_LOAD=1 — starting without model weights")
+        return
     # Start model loading in background
     threading.Thread(target=_load_model_background, daemon=True).start()
 
@@ -142,24 +163,28 @@ async def create_transcription(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
 
+    # temp_path присваивается ДО чтения: если await file.read() упадёт,
+    # исключение выскочит из with раньше, чем temp_path получит значение,
+    # и finally не вычистит временный файл — он утекал на диск.
+    temp_path = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
-            content = await file.read()
-            temp_file.write(content)
             temp_path = temp_file.name
+            temp_file.write(await file.read())
 
-        try:
-            transcription = model_loader.transcribe(temp_path)
-            logger.debug(f"Transcription result: {transcription}")
-            return transcription
-        finally:
-            os.unlink(temp_path)
+        transcription = model_loader.transcribe(temp_path)
+        logger.debug(f"Transcription result: {transcription}")
+        return transcription
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
 
