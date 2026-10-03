@@ -1,6 +1,28 @@
 #!/bin/bash
-if bash scripts/checks.sh >/dev/null 2>&1; then RESULT=pass; else RESULT=fail; fi
-if ! grep -q '^X-Local-Checks:' "$1"; then
-    { echo; echo "X-Local-Checks: $RESULT"; } >> "$1"
+# Commit-msg: НЕ блокирует коммит, а фиксирует результат локальных проверок
+# в теле сообщения трейлером X-Local-Checks.
+#
+# Почему не блокирует: назначение хука — аттестация, а не запрет. Если бы
+# он запрещал, разработчик начал бы обходить его целиком, а не исправлять
+# код. Единственный блокирующий рубеж — Jenkins.
+#
+# Почему трейлер, а не запись в reports/: хук работает на машине
+# разработчика, у него нет доступа к артефактам Jenkins, и факт «здесь
+# проверки падали» должен пережить перенос репозитория. Пайплайн читает
+# разметку обратно через git log %(trailers:...) — см. aggregate_report.py.
+
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+if bash scripts/checks.sh >/dev/null 2>&1; then
+    RESULT=pass
+else
+    RESULT=fail
 fi
+
+if ! grep -q '^X-Local-Checks:' "$1"; then
+    printf '\nX-Local-Checks: %s\n' "$RESULT" >> "$1"
+fi
+
 exit 0
