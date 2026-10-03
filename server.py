@@ -52,6 +52,13 @@ model_loaded = False
 SKIP_MODEL_LOAD = os.environ.get("VOICEAPI_SKIP_MODEL_LOAD", "") == "1"
 PORT = int(os.environ.get("PORT", "8000"))
 
+# Слушаем только петлю по умолчанию: тесты достают сервер через localhost,
+# а публиковать его на всех интерфейсах никто не просил. Литерал
+# "0.0.0.0" здесь давал bandit B104 (hardcoded_bind_all_interfaces) и
+# ронял стадию Security Scan. Слушать наружу — осознанное решение,
+# выраженное переменной окружения, а не зашитым литералом.
+HOST = os.environ.get("HOST", "127.0.0.1")
+
 app = FastAPI(
     title="GigaAM API",
     description=f"API для транскрипции аудио с использованием {MODEL_NAME} модели",
@@ -186,5 +193,5 @@ async def create_transcription(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host=HOST, port=PORT)
 

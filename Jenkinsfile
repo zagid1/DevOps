@@ -29,11 +29,13 @@ pipeline {
 
         stage('Aggregate Report') {
             steps {
-                // set +e: агрегатор возвращает 1 при провале, но ронять
-                // стадию нельзя — тогда archiveArtifacts не выполнится и
-                // артефакт с разбором провала не сохранится. Вердикт
-                // объявляет следующая стадия.
-                sh 'set +e; ${PYTHON} scripts/aggregate_report.py'
+                // exit 0 обязателен. set +e запрещает прерывание, но НЕ
+                // меняет код возврата последней команды: без явного exit 0
+                // стадия отдавала 1, пайплайн обрывался здесь, и
+                // archiveArtifacts не выполнялся вовсе — артефакт с
+                // разбором провала терялся вместе с причиной провала.
+                // Вердикт объявляет следующая стадия.
+                sh 'set +e; ${PYTHON} scripts/aggregate_report.py; exit 0'
                 archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
             }
         }
