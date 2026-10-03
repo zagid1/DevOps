@@ -1,0 +1,10 @@
+# Хуки и shell-скрипты ОБЯЗАНЫ оставаться с LF.
+# При core.autocrlf=true Git выдаёт их с CRLF, и bash перестаёт их понимать:
+# `fi\r` — уже не ключевое слово `fi`, а имя команды.
+*.sh          text eol=lf
+.githooks/*   text eol=lf
+Jenkinsfile   text eol=lf
+
+# Встроенные файлы читаем как есть: CRLF в них — часть формата.
+*.wav         binary
+*.pyc         binary
