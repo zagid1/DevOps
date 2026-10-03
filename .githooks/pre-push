@@ -1,0 +1,8 @@
+#!/bin/bash
+# Pre-push: fast-checks + unit-тесты (дёшево, но ловит поломку до push)
+PY=$(command -v python3 || command -v python)
+echo "🔍 Pre-push: fast checks + unit tests..."
+bash scripts/checks.sh || { echo "❌ pre-push blocked: fast checks failed"; exit 1; }
+"$PY" -m pytest tests/ -q --tb=short || { echo "❌ pre-push blocked: unit tests failed"; exit 1; }
+echo "✅ Pre-push passed"
+exit 0

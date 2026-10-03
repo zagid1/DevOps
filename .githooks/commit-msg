@@ -1,0 +1,6 @@
+#!/bin/bash
+if bash scripts/checks.sh >/dev/null 2>&1; then RESULT=pass; else RESULT=fail; fi
+if ! grep -q '^X-Local-Checks:' "$1"; then
+    { echo; echo "X-Local-Checks: $RESULT"; } >> "$1"
+fi
+exit 0
