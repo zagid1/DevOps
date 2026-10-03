@@ -17,8 +17,11 @@ fi
 # Каждый файл проверяем отдельно, чтобы точно указать, где найдено TODO
 FAILED=0
 for file in $STAGED_FILES; do
-    # -U0 — без контекста, ловим только добавленные строки (^+)
-    if git diff --cached --unified=0 --no-color -- "$file" | grep -q '^+.*TODO'; then
+    # -U0 — без контекста, ловим только добавленные строки (^+).
+    # Строки заголовка "+++ b/файл" отбрасываем: без этого файл с
+    # подстрокой TODO в имени давал ложное срабатывание.
+    if git diff --cached --unified=0 --no-color -- "$file" \
+        | grep -v '^+++' | grep -q '^+.*TODO'; then
         echo "❌ Найден TODO-комментарий: $file"
         FAILED=1
     fi

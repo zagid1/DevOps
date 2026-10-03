@@ -10,7 +10,9 @@
 
 echo "🔍 CI: проверка на TODO в Python файлах..."
 
-TODO_FILES=$(git ls-files '*.py' | xargs grep -l "TODO" 2>/dev/null || true)
+# xargs -r: без него при пустом списке grep запускается без аргументов
+# и читает stdin, то есть висит до таймаута стадии.
+TODO_FILES=$(git ls-files '*.py' | xargs -r grep -l "TODO" 2>/dev/null || true)
 
 if [ -n "$TODO_FILES" ]; then
     echo "❌ CI failed: TODO found in codebase"

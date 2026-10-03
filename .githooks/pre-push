@@ -1,8 +1,32 @@
 #!/bin/bash
-# Pre-push: fast-checks + unit-тесты (дёшево, но ловит поломку до push)
-PY=$(command -v python3 || command -v python)
+# Pre-push: быстрые проверки + юнит-тесты.
+#
+# Философия задания: локальный хук даёт быструю обратную связь и может быть
+# обойдён (--no-verify). Единственный источник истины — Jenkins, поэтому
+# отсутствие pytest здесь НЕ блокирует push, а лишь предупреждает.
+set -uo pipefail
+
 echo "🔍 Pre-push: fast checks + unit tests..."
-bash scripts/checks.sh || { echo "❌ pre-push blocked: fast checks failed"; exit 1; }
-"$PY" -m pytest tests/ -q --tb=short || { echo "❌ pre-push blocked: unit tests failed"; exit 1; }
+
+if ! bash scripts/checks.sh; then
+    echo "❌ pre-push blocked: fast checks failed"
+    exit 1
+fi
+
+. scripts/_common.sh
+
+# Ищем интерпретатор, в котором установлен pytest, а не первый в PATH.
+if PY="$(pick_python pytest)"; then
+    echo "→ running unit tests via: $PY"
+    if ! "$PY" -m pytest tests/ -q --tb=short; then
+        echo "❌ pre-push blocked: unit tests failed"
+        exit 1
+    fi
+    echo "✅ Unit tests passed"
+else
+    echo "⚠️  pytest unavailable locally — skipping unit tests."
+    echo "   Это не блокирует push: Jenkins прогнит их на сервере."
+fi
+
 echo "✅ Pre-push passed"
 exit 0
