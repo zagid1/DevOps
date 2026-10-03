@@ -16,15 +16,16 @@ PORT="${LOAD_PORT:-8102}"
 BASE="http://127.0.0.1:${PORT}"
 N="${LOAD_REQUESTS:-100}"
 THRESHOLD_MS="${LOAD_THRESHOLD_MS:-500}"
+SRV_LOG="$(server_log_path load_server)"
 export PORT VOICEAPI_SKIP_MODEL_LOAD=1
 
-"$PY" server.py >/tmp/load_server.log 2>&1 &
+"$PY" server.py >"$SRV_LOG" 2>&1 &
 SRV=$!
 trap 'kill "$SRV" >/dev/null 2>&1; wait "$SRV" 2>/dev/null' EXIT
 
 if ! wait_for_health "$BASE" "$SRV"; then
     echo "server did not become ready on port ${PORT}"
-    tail -20 /tmp/load_server.log
+    tail -20 "$SRV_LOG"
     exit 1
 fi
 

@@ -45,11 +45,23 @@ require_python() {
     export PY
 }
 
+# Каталог для логов сервера, поднятого скриптом. На CI это reports/ рядом
+# с остальными артефактами; локально reports/ тоже есть, он в .gitignore.
+# Раньше логи шли в /tmp, который на агентах смонтирован в RAM.
+server_log_path() {
+    mkdir -p "$REPO_ROOT/reports"
+    echo "$REPO_ROOT/reports/${1:-server}.log"
+}
+
 # wait_for_health BASE_URL PID — ждёт готовый HTTP-ответ, а не просто процесс.
 # Возвращает 1, если процесс умер или не поднялся за отведённое время.
+#
+# 180 секунд по умолчанию: сервер тянет model_loader -> transformers и
+# torch ещё на импорте (флаг VOICEAPI_SKIP_MODEL_LOAD снимает загрузку
+# весов, но не импорт), и на холодном Linux это десятки секунд.
 wait_for_health() {
     local base="$1" pid="$2" i
-    for i in $(seq 1 "${READY_ATTEMPTS:-60}"); do
+    for i in $(seq 1 "${READY_ATTEMPTS:-180}"); do
         if curl -sf "$base/health" >/dev/null 2>&1; then
             return 0
         fi
